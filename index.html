@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<script src="https://alcdn.msauth.net/browser/3.7.1/js/msal-browser.min.js"></script>
+<script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
 
 <style>
 :root{
@@ -723,7 +723,7 @@ async function initMsal() {
     },
     cache: { cacheLocation: "sessionStorage" }
   });
-  await msalApp.initialize();
+  if (typeof msalApp.initialize === "function") { await msalApp.initialize(); } /* v3-API; bei v2 nicht vorhanden, dann einfach überspringen */
   try { await msalApp.handleRedirectPromise(); } catch (e) {}
   const accs = msalApp.getAllAccounts();
   if (accs.length) { msalAccount = accs[0]; msalApp.setActiveAccount(msalAccount); }
