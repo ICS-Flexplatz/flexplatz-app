@@ -35,6 +35,32 @@
   --r:18px;
   --r-s:12px;
 }
+:root[data-theme="dark"]{
+  --bg:#0F1620;
+  --glass:rgba(255,255,255,.06);
+  --glass-2:rgba(255,255,255,.1);
+  --edge:rgba(255,255,255,.12);
+  --edge-2:rgba(255,255,255,.14);
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+  --shadow-2:0 18px 46px rgba(0,0,0,.55);
+  --ink:#EAF0F8;
+  --ink-2:#B7C3D6;
+  --ink-3:#8494AC;
+  --teal:#3FD6C9;
+  --free:#34D399;
+  --busy:#F87171;
+  --mine:#A78BFA;
+  --off:#64748B;
+}
+:root[data-theme="dark"] .sky{
+  background:
+    radial-gradient(760px 520px at 8% -6%,  rgba(20,90,80,.45), transparent 64%),
+    radial-gradient(720px 480px at 92% 2%,  rgba(40,50,110,.5), transparent 62%),
+    radial-gradient(680px 460px at 74% 104%, rgba(120,60,40,.3), transparent 64%),
+    radial-gradient(520px 400px at 22% 92%, rgba(30,60,100,.4), transparent 66%),
+    linear-gradient(180deg,#0A0F16 0%, #0D131C 60%, #0F1620 100%);
+}
+:root[data-theme="dark"] img{ filter: brightness(.92) contrast(1.03); }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
@@ -60,16 +86,16 @@ img{display:block; max-width:100%}
 
 /* ---------------- Kopf ---------------- */
 .top{
-  position:sticky; top:0; z-index:40; background:rgba(255,255,255,.66);
+  position:sticky; top:0; z-index:40; background:var(--glass-2);
   backdrop-filter:blur(20px) saturate(150%); -webkit-backdrop-filter:blur(20px) saturate(150%);
-  border-bottom:1px solid rgba(255,255,255,.75); box-shadow:0 1px 0 rgba(19,32,51,.06);
+  border-bottom:1px solid var(--edge); box-shadow:0 1px 0 rgba(19,32,51,.06);
 }
 .top-in{max-width:1800px; margin:0 auto; padding:13px 32px; display:flex; align-items:center; gap:14px; flex-wrap:wrap}
 .brand{display:flex; align-items:center; gap:12px; min-width:0}
 .logo{width:40px; height:40px; flex:none; border-radius:9px; object-fit:contain; box-shadow:0 4px 12px rgba(0,150,190,.28)}
 .logo.gross{width:64px; height:64px; border-radius:12px}
 .statuspille{
-  display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.8);
+  display:inline-flex; align-items:center; gap:8px; background:var(--glass-2);
   border:1px solid var(--edge-2); border-radius:999px; padding:7px 14px;
   font-size:13px; font-weight:600; color:var(--ink-2); box-shadow:var(--shadow);
 }
@@ -92,7 +118,7 @@ img{display:block; max-width:100%}
   border:1px solid transparent; background:none; padding:8px 14px; border-radius:999px; white-space:nowrap;
   font-size:13.5px; font-weight:600; color:var(--ink-3); display:flex; align-items:center; gap:7px;
 }
-.tab:hover{color:var(--ink); background:rgba(255,255,255,.6)}
+.tab:hover{color:var(--ink); background:var(--glass)}
 .tab[aria-selected="true"]{
   color:#fff; background:linear-gradient(150deg,#12857E,#0C6266); border-color:transparent;
   box-shadow:0 6px 16px rgba(11,95,99,.3);
@@ -111,10 +137,14 @@ img{display:block; max-width:100%}
 .fld label{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3)}
 .fld select, .fld input[type=date], .fld input[type=text], .fld input[type=number], .fld input[type=email]{
   font:inherit; font-size:15px; font-weight:500; color:var(--ink);
-  background:#fff; border:1px solid var(--edge-2); border-radius:var(--r-s);
+  background:var(--glass-2); border:1px solid var(--edge-2); border-radius:var(--r-s);
   padding:10px 12px; width:100%; font-variant-numeric:tabular-nums; appearance:none; -webkit-appearance:none;
   box-shadow:0 1px 2px rgba(19,32,51,.05);
 }
+/* Die aufklappende Options-Liste von <select> kann der Browser nicht vollständig per CSS einfärben –
+   deshalb bleibt sie bewusst immer hell/lesbar, auch im Dark Mode der restlichen App. */
+.fld select{color-scheme:light}
+.fld select option{color:#132033; background:#fff}
 .fld select:hover, .fld input[type=date]:hover{border-color:rgba(14,111,107,.45)}
 .adm-row{
   background:var(--glass); border:1px solid var(--edge); border-radius:var(--r);
@@ -353,7 +383,7 @@ img{display:block; max-width:100%}
 }
 .veil[hidden]{display:none!important}
 .sheet{
-  width:100%; max-width:480px; background:rgba(255,255,255,.92);
+  width:100%; max-width:480px; background:var(--glass-2);
   border:1px solid var(--edge); border-radius:22px; padding:24px;
   box-shadow:0 40px 90px rgba(19,32,51,.3); max-height:calc(100vh - 44px); overflow-y:auto;
   backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
@@ -366,7 +396,7 @@ img{display:block; max-width:100%}
 .dl dd{margin:0; font-family:"IBM Plex Mono",monospace; font-weight:500}
 .tl{margin:18px 0 6px}
 .tl-lbl{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); margin-bottom:8px}
-.tl-bar{position:relative; height:24px; border-radius:8px; background:#EDF1F7; border:1px solid var(--edge-2); overflow:hidden}
+.tl-bar{position:relative; height:24px; border-radius:8px; background:var(--bg); border:1px solid var(--edge-2); overflow:hidden}
 .tl-seg{position:absolute; top:0; bottom:0; background:rgba(225,87,63,.55)}
 .tl-seg.m{background:rgba(108,76,224,.55)}
 .tl-now{position:absolute; top:-2px; bottom:-2px; border:2px solid var(--free); border-radius:7px; background:rgba(18,161,117,.16)}
@@ -377,8 +407,8 @@ img{display:block; max-width:100%}
 }
 .acts{display:flex; gap:11px; margin-top:22px}
 .acts button{flex:1; border-radius:13px; padding:13px; font-size:15px; font-weight:700; border:1px solid var(--edge-2)}
-.acts .ab{background:rgba(255,255,255,.7); color:var(--ink-2)}
-.acts .ab:hover{background:#fff}
+.acts .ab{background:var(--glass); color:var(--ink-2)}
+.acts .ab:hover{background:var(--glass-2)}
 .acts .ok{background:linear-gradient(150deg,#12857E,#0C6266); border-color:transparent; color:#fff; box-shadow:0 8px 20px rgba(11,95,99,.32)}
 .acts .ok:hover{filter:brightness(1.08)}
 .acts .ok:disabled{background:#E3E9F1; color:var(--ink-3); cursor:not-allowed; box-shadow:none}
@@ -388,7 +418,7 @@ img{display:block; max-width:100%}
 }
 .toast{
   position:fixed; left:50%; bottom:26px; transform:translateX(-50%); z-index:70;
-  background:rgba(255,255,255,.96); border:1px solid var(--edge); border-radius:14px;
+  background:var(--glass-2); border:1px solid var(--edge); border-radius:14px;
   padding:13px 19px; font-size:14.5px; font-weight:600; box-shadow:0 20px 50px rgba(19,32,51,.25);
   display:flex; align-items:center; gap:11px;
 }
@@ -412,7 +442,10 @@ img{display:block; max-width:100%}
         <div class="sub">Flexplätze &amp; Besprechungsräume</div>
       </div>
     </div>
-    <div class="who"><span class="statuspille"><span class="led free"></span><span class="mono" id="kopfFrei">–</span> frei</span></div>
+    <div class="who">
+      <button id="btnTheme" class="btn" style="margin-right:10px" title="Hell/Dunkel umschalten">🌙</button>
+      <span class="statuspille"><span class="led free"></span><span class="mono" id="kopfFrei">–</span> frei</span>
+    </div>
   </div>
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" id="tStart">Start</button>
@@ -420,6 +453,7 @@ img{display:block; max-width:100%}
     <button class="tab" role="tab" id="tRaeume">Räume &amp; Plätze</button>
     <button class="tab" role="tab" id="tMine">Meine Buchungen <span class="cnt" id="cMine"></span></button>
     <button class="tab" role="tab" id="tAdmin" hidden>Admin</button>
+    <button class="tab" role="tab" id="tLiveKurz" hidden>🟢 Live-Belegung</button>
   </nav>
 </header>
 
@@ -559,15 +593,88 @@ img{display:block; max-width:100%}
     <div id="mineList"></div>
   </section>
 
-  <!-- ======== Admin: Flexplätze verwalten ======== -->
+  <!-- ======== Live-Belegung (für alle sichtbar) ======== -->
+  <section id="vLive" hidden>
+    <div class="gsec" style="margin-top:6px"><h2>Wer sitzt gerade wo</h2><span class="ln"></span></div>
+    <p style="color:var(--ink-3); margin:-6px 0 18px; font-size:14px" id="liveZeit"></p>
+    <div id="liveListe"></div>
+  </section>
+
+  <!-- ======== Admin ======== -->
   <section id="vAdmin" hidden>
-    <div class="gsec" style="margin-top:6px"><h2>Flexplätze verwalten</h2><span class="ln"></span></div>
+    <div class="gsec" style="margin-top:6px"><h2>Admin-Center</h2><span class="ln"></span></div>
     <p style="color:var(--ink-3); margin:-6px 0 18px; font-size:14px">
-      Nur für Mitglieder der Website-Eigentümer-Gruppe sichtbar. Änderungen sind sofort für alle live.
+      Nur für berechtigte Personen sichtbar. Änderungen sind sofort für alle live.
     </p>
-    <div id="admListe"></div>
-    <div class="gsec" style="margin-top:30px"><h2>Neuen Flexplatz hinzufügen</h2><span class="ln"></span></div>
-    <div id="admNeu" class="controls" style="margin-top:14px"></div>
+    <nav class="tabs" role="tablist" style="margin-bottom:20px">
+      <button class="tab" role="tab" id="tAdmPlaetze">Flexplätze</button>
+      <button class="tab" role="tab" id="tAdmBuchungen">Alle Buchungen</button>
+      <button class="tab" role="tab" id="tAdmStatistik">Statistik</button>
+      <button class="tab" role="tab" id="tAdmAdmins">Admins verwalten</button>
+      <button class="tab" role="tab" id="tAdmProtokoll">Protokoll</button>
+      <button class="tab" role="tab" id="tAdmEinstellungen">Einstellungen</button>
+    </nav>
+
+    <div id="admSubPlaetze">
+      <div class="gsec"><h2>Flexplätze verwalten</h2><span class="ln"></span></div>
+      <div id="admListe"></div>
+      <div class="gsec" style="margin-top:30px"><h2>Neuen Flexplatz hinzufügen</h2><span class="ln"></span></div>
+      <div id="admNeu" class="controls" style="margin-top:14px"></div>
+    </div>
+
+    <div id="admSubBuchungen" hidden>
+      <div class="gsec"><h2>Alle Buchungen</h2><span class="ln"></span></div>
+      <div class="controls" style="margin:14px 0">
+        <div class="fld"><label>Suche (Name/Platz)</label><input type="text" id="admBSuche" placeholder="z. B. Weber oder Rom"></div>
+        <div class="fld"><label>Datum</label><input type="date" id="admBDatum"></div>
+        <div><button class="btn" id="admBExport">⬇ Als CSV exportieren</button></div>
+      </div>
+      <div id="admBuchListe"></div>
+    </div>
+
+    <div id="admSubAdmins" hidden>
+      <div class="gsec"><h2>Admins verwalten</h2><span class="ln"></span></div>
+      <p style="color:var(--ink-3); margin:-6px 0 18px; font-size:14px">
+        Diese E-Mail-Adressen sehen den Admin-Bereich. Vorsicht beim Entfernen der eigenen Adresse.
+      </p>
+      <div id="admAdminsListe"></div>
+      <div class="controls" style="margin-top:16px">
+        <div class="fld"><label>Neue Admin-E-Mail</label><input type="email" id="admAdminNeu" placeholder="name@ics-adminservice.de"></div>
+        <div><button class="ok" id="admAdminAddBtn">+ Hinzufügen</button></div>
+      </div>
+    </div>
+
+    <div id="admSubStatistik" hidden>
+      <div class="gsec"><h2>Auslastung</h2><span class="ln"></span></div>
+      <div id="admStatKacheln" class="stats" style="margin-bottom:26px"></div>
+      <div class="gsec"><h2>Meistgebuchte Plätze</h2><span class="ln"></span></div>
+      <div id="admStatTop" style="margin:14px 0 26px"></div>
+      <div class="gsec"><h2>Buchungen pro Wochentag</h2><span class="ln"></span></div>
+      <div id="admStatWochentag" style="margin-top:14px"></div>
+    </div>
+
+    <div id="admSubProtokoll" hidden>
+      <div class="gsec"><h2>Aktivitäts-Protokoll</h2><span class="ln"></span></div>
+      <p style="color:var(--ink-3); margin:-6px 0 18px; font-size:14px">Die letzten 200 Admin-Aktionen, neueste zuerst.</p>
+      <div id="admProtokollListe"></div>
+    </div>
+
+    <div id="admSubEinstellungen" hidden>
+      <div class="gsec"><h2>Wartungsmodus</h2><span class="ln"></span></div>
+      <div class="controls" style="margin:14px 0 26px">
+        <div class="fld">
+          <label>Buchen für alle sperren</label>
+          <select id="admWartung"><option value="nein">Aus – normal buchbar</option><option value="ja">An – nur Admins können buchen</option></select>
+        </div>
+        <div><button class="ok" id="admWartungSpeichern">Speichern</button></div>
+      </div>
+      <div class="gsec"><h2>Ankündigungsbanner</h2><span class="ln"></span></div>
+      <p style="color:var(--ink-3); margin:-6px 0 18px; font-size:14px">Erscheint für alle ganz oben in der App. Leer lassen, um es auszublenden.</p>
+      <div class="controls" style="margin:14px 0">
+        <div class="fld" style="grid-column:1/-1"><label>Text</label><input type="text" id="admAnkuendigung" placeholder="z. B. Montag ist Betriebsversammlung, Raum Italien gesperrt"></div>
+        <div><button class="ok" id="admAnkuendigungSpeichern">Speichern</button></div>
+      </div>
+    </div>
   </section>
 
 </main>
@@ -774,7 +881,7 @@ function laden() { try { const r = localStorage.getItem(KEY); if (r) { BUCHUNGEN
    Spalten in der Liste "FlexplatzBuchungen" (unverändert wie bisher):
      TischKey, Datum (JJJJ-MM-TT), Von (Minuten seit Mitternacht), Bis, Wer                          */
 async function graphToken() {
-  const req = { scopes: ["Sites.ReadWrite.All"], account: msalAccount };
+  const req = { scopes: ["Sites.ReadWrite.All", "User.Read.All"], account: msalAccount };
   try { return (await msalApp.acquireTokenSilent(req)).accessToken; }
   catch (e) { return (await msalApp.acquireTokenPopup(req)).accessToken; }
 }
@@ -785,8 +892,8 @@ async function graphFetch(url, opts = {}) {
   if (!res.ok) { const t = await res.text().catch(() => ""); throw new Error("Graph-Fehler " + res.status + ": " + t); }
   return res.status === 204 ? null : res.json();
 }
-let siteId = null, listIdBuchungen = null, listIdTische = null, listIdAdmins = null;
-let colB = null, colT = null, colA = null; /* Zuordnung: unser Name -> echter interner SharePoint-Name */
+let siteId = null, listIdBuchungen = null, listIdTische = null, listIdAdmins = null, listIdLog = null, listIdEinstellungen = null;
+let colB = null, colT = null, colA = null, colL = null, colE = null; /* Zuordnung: unser Name -> echter interner SharePoint-Name */
 async function ladeSpaltenZuordnung(listId, brauchtNamen) {
   const j = await graphFetch("https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listId + "/columns?$select=name,displayName,readOnly,hidden");
   const nutzbar = j.value.filter(c => !c.readOnly);
@@ -807,23 +914,29 @@ async function ladeSiteUndListenIds() {
   const lb = listen.value.find(l => l.displayName === "FlexplatzBuchungen");
   const lt = listen.value.find(l => l.displayName === "FlexplatzTische");
   const la = listen.value.find(l => l.displayName === "FlexplatzAdmins");
+  const ll = listen.value.find(l => l.displayName === "FlexplatzLog");
+  const le = listen.value.find(l => l.displayName === "FlexplatzEinstellungen");
   if (!lb || !lt) throw new Error("Listen FlexplatzBuchungen/FlexplatzTische nicht gefunden.");
   listIdBuchungen = lb.id; listIdTische = lt.id;
   colB = await ladeSpaltenZuordnung(listIdBuchungen, ["TischKey", "Datum", "Von", "Bis", "Wer"]);
+  try { colB.WerMail = (await ladeSpaltenZuordnung(listIdBuchungen, ["WerMail"])).WerMail; } catch (e) { colB.WerMail = null; } /* optional, für PW/FRW-Gruppierung */
   colT = await ladeSpaltenZuordnung(listIdTische, ["TischKey", "RaumId", "RaumName", "Name", "Mail", "Links", "Oben", "Breite", "Hoehe", "Aktiv"]);
   if (la) { listIdAdmins = la.id; colA = await ladeSpaltenZuordnung(listIdAdmins, ["Mail"]); }
+  if (ll) { listIdLog = ll.id; colL = await ladeSpaltenZuordnung(listIdLog, ["Wer", "Aktion"]); }
+  if (le) { listIdEinstellungen = le.id; colE = await ladeSpaltenZuordnung(listIdEinstellungen, ["Schluessel", "Wert"]); }
 }
 async function ladeBuchungenSP() {
   await ladeSiteUndListenIds();
   const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdBuchungen + "/items?$expand=fields&$top=5000";
   const j = await graphFetch(url);
-  BUCHUNGEN = j.value.map(it => ({ id: it.id, key: it.fields[colB.TischKey], datum: it.fields[colB.Datum], von: Number(it.fields[colB.Von]), bis: Number(it.fields[colB.Bis]), wer: it.fields[colB.Wer] }));
+  BUCHUNGEN = j.value.map(it => ({ id: it.id, key: it.fields[colB.TischKey], datum: it.fields[colB.Datum], von: Number(it.fields[colB.Von]), bis: Number(it.fields[colB.Bis]), wer: it.fields[colB.Wer], werMail: colB.WerMail ? (it.fields[colB.WerMail] || "") : "" }));
 }
 async function erstelleBuchungSP(b) {
   await ladeSiteUndListenIds();
   const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdBuchungen + "/items";
   const fields = {};
   fields[colB.TischKey] = b.key; fields[colB.Datum] = b.datum; fields[colB.Von] = b.von; fields[colB.Bis] = b.bis; fields[colB.Wer] = b.wer;
+  if (colB.WerMail && b.werMail) fields[colB.WerMail] = b.werMail;
   const j = await graphFetch(url, { method: "POST", body: JSON.stringify({ fields }) });
   return j.id;
 }
@@ -909,6 +1022,79 @@ async function pruefeAdminRecht() {
     return j.value.some(it => (it.fields[colA.Mail] || "").toLowerCase() === mail);
   } catch (e) { return false; }
 }
+let ADMINS_LISTE = [];
+async function ladeAdminsSP() {
+  if (!spVerfuegbar()) { ADMINS_LISTE = []; return; }
+  await ladeSiteUndListenIds();
+  if (!listIdAdmins) { ADMINS_LISTE = []; return; }
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdAdmins + "/items?$expand=fields&$top=500";
+  const j = await graphFetch(url);
+  ADMINS_LISTE = j.value.map(it => ({ id: it.id, mail: it.fields[colA.Mail] || "" }));
+}
+async function erstelleAdminSP(mail) {
+  await ladeSiteUndListenIds();
+  if (!listIdAdmins) throw new Error("Liste 'FlexplatzAdmins' existiert nicht. Bitte zuerst in SharePoint anlegen.");
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdAdmins + "/items";
+  const fields = {}; fields[colA.Mail] = mail;
+  const j = await graphFetch(url, { method: "POST", body: JSON.stringify({ fields }) });
+  return j.id;
+}
+async function loescheAdminSP(id) {
+  await ladeSiteUndListenIds();
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdAdmins + "/items/" + id;
+  await graphFetch(url, { method: "DELETE" });
+}
+
+/* ---------------- Aktivitäts-Protokoll (FlexplatzLog) ---------------- */
+async function logAktion(aktion) {
+  try {
+    await ladeSiteUndListenIds();
+    if (!listIdLog) return; /* Liste existiert noch nicht – Protokoll einfach überspringen */
+    const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdLog + "/items";
+    const fields = {}; fields[colL.Wer] = ICH; fields[colL.Aktion] = aktion;
+    await graphFetch(url, { method: "POST", body: JSON.stringify({ fields }) });
+  } catch (e) { /* Protokollieren darf die eigentliche Aktion nie blockieren */ }
+}
+let LOG_EINTRAEGE = [];
+async function ladeLogSP() {
+  if (!spVerfuegbar()) { LOG_EINTRAEGE = []; return; }
+  await ladeSiteUndListenIds();
+  if (!listIdLog) { LOG_EINTRAEGE = []; return; }
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdLog + "/items?$expand=fields&$orderby=createdDateTime desc&$top=200";
+  const j = await graphFetch(url);
+  LOG_EINTRAEGE = j.value.map(it => ({ zeit: it.createdDateTime, wer: it.fields[colL.Wer] || "", aktion: it.fields[colL.Aktion] || "" }));
+}
+
+/* ---------------- Einstellungen (FlexplatzEinstellungen): Wartungsmodus + Ankündigung ---------------- */
+let EINSTELLUNGEN = { wartungsmodus: "nein", ankuendigung: "" };
+let einstellungenItemIds = {};
+async function ladeEinstellungenSP() {
+  if (!spVerfuegbar()) return;
+  await ladeSiteUndListenIds();
+  if (!listIdEinstellungen) return;
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdEinstellungen + "/items?$expand=fields&$top=200";
+  const j = await graphFetch(url);
+  j.value.forEach(it => {
+    const schl = (it.fields[colE.Schluessel] || "").toLowerCase();
+    if (schl) { EINSTELLUNGEN[schl] = it.fields[colE.Wert] || ""; einstellungenItemIds[schl] = it.id; }
+  });
+}
+async function setzeEinstellungSP(schluessel, wert) {
+  await ladeSiteUndListenIds();
+  if (!listIdEinstellungen) throw new Error("Liste 'FlexplatzEinstellungen' existiert nicht. Bitte zuerst in SharePoint anlegen.");
+  const bestehendeId = einstellungenItemIds[schluessel];
+  if (bestehendeId) {
+    const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdEinstellungen + "/items/" + bestehendeId + "/fields";
+    const fields = {}; fields[colE.Wert] = wert;
+    await graphFetch(url, { method: "PATCH", body: JSON.stringify(fields) });
+  } else {
+    const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdEinstellungen + "/items";
+    const fields = {}; fields[colE.Schluessel] = schluessel; fields[colE.Wert] = wert;
+    const j = await graphFetch(url, { method: "POST", body: JSON.stringify({ fields }) });
+    einstellungenItemIds[schluessel] = j.id;
+  }
+  EINSTELLUNGEN[schluessel] = wert;
+}
 function saat() {
   const t = heute();
   const m = new Date(); m.setDate(m.getDate() + 1);
@@ -962,6 +1148,7 @@ function controlsAufbauen(host, sfx) {
       '<div class="fld"><label for="fD' + sfx + '">Datum</label><input type="date" id="fD' + sfx + '" class="cDatum"></div>' +
       '<div class="fld"><label for="fS' + sfx + '">Ab</label><select id="fS' + sfx + '" class="cStart"></select></div>' +
       '<div class="fld"><label for="fL' + sfx + '">Dauer</label><select id="fL' + sfx + '" class="cDauer"></select></div>' +
+      (sfx === "a" ? '<div class="fld"><label for="fP' + sfx + '">Flexplatz direkt wählen</label><select id="fP' + sfx + '" class="cPlatzwahl"><option value="">– bitte wählen –</option></select></div>' : '') +
       '<div class="slot"><div class="lbl">Zeitraum</div><div class="val mono cSlot"></div></div>' +
     '</div>';
   const s = host.querySelector(".cStart"), l = host.querySelector(".cDauer");
@@ -970,6 +1157,21 @@ function controlsAufbauen(host, sfx) {
   host.querySelector(".cDatum").onchange = e => { S.datum = e.target.value || heute(); alles(); };
   s.onchange = e => { S.start = +e.target.value; if (S.start + S.dauer > 20 * 60) S.dauer = Math.max(30, 20 * 60 - S.start); alles(); };
   l.onchange = e => { S.dauer = +e.target.value; alles(); };
+  const p = host.querySelector(".cPlatzwahl");
+  if (p) {
+    p.onchange = e => { if (e.target.value) { oeffneDialog(e.target.value); e.target.value = ""; } };
+  }
+}
+function platzwahlFuellen() {
+  const p = $("#fPa");
+  if (!p) return;
+  const bisher = p.value;
+  const flex = PLAETZE.filter(x => x.typ === "f" && !x.ganz).slice().sort((a, b) => a.name.localeCompare(b.name, "de"));
+  p.innerHTML = '<option value="">– bitte wählen –</option>' + flex.map(x => {
+    const frei = status(x.key).art === "free";
+    return '<option value="' + x.key + '">' + x.name + " · " + x.raumName + (frei ? "" : " (belegt)") + '</option>';
+  }).join("");
+  p.value = bisher || "";
 }
 function controlsFuellen() {
   document.querySelectorAll(".cDatum").forEach(e => e.value = S.datum);
@@ -1271,8 +1473,12 @@ function oeffneDialog(key) {
 function schliesse() { $("#veil").hidden = true; offenerPlatz = null; }
 async function buchen() {
   if (!offenerPlatz || status(offenerPlatz).art !== "free") return;   /* letzte Prüfung vor dem Speichern */
+  if (EINSTELLUNGEN.wartungsmodus === "ja" && !IST_ADMIN) {
+    toast("Buchen ist gerade wegen Wartungsarbeiten vorübergehend gesperrt.");
+    return;
+  }
   const p = PLAETZE.find(x => x.key === offenerPlatz);
-  const neu = { key: offenerPlatz, datum: S.datum, von: von(), bis: bis(), wer: ICH };
+  const neu = { key: offenerPlatz, datum: S.datum, von: von(), bis: bis(), wer: ICH, werMail: (msalAccount && msalAccount.username) || "" };
   $("#dlgOk").disabled = true;
   try {
     if (spVerfuegbar()) {
@@ -1339,7 +1545,7 @@ function zeichneAdmin() {
     row.querySelector(".admToggle").onclick = () => { row.classList.toggle("open"); };
     row.querySelector(".admDel").onclick = async () => {
       if (!confirm('"' + (t.name || t.key) + '" wirklich löschen?')) return;
-      try { await loescheTischSP(t.id); await ladeTischeSP(); anwendenTischeAufPlaetze(); alles(); toast("Flexplatz gelöscht."); }
+      try { await loescheTischSP(t.id); await ladeTischeSP(); anwendenTischeAufPlaetze(); alles(); logAktion("Flexplatz gelöscht: " + (t.name || t.key)); toast("Flexplatz gelöscht."); }
       catch (e) { toast("Löschen hat nicht geklappt: " + e.message); }
     };
     row.querySelector(".admSave").onclick = async () => {
@@ -1349,7 +1555,7 @@ function zeichneAdmin() {
         pos: [Number($("#admL" + sfx).value), Number($("#admO" + sfx).value), Number($("#admB" + sfx).value), Number($("#admH" + sfx).value)],
         aktiv: $("#admA" + sfx).value === "1"
       };
-      try { await aktualisiereTischSP(t.id, upd); await ladeTischeSP(); anwendenTischeAufPlaetze(); alles(); toast("Gespeichert."); }
+      try { await aktualisiereTischSP(t.id, upd); await ladeTischeSP(); anwendenTischeAufPlaetze(); alles(); logAktion("Flexplatz bearbeitet: " + (upd.name || t.key)); toast("Gespeichert."); }
       catch (e) { toast("Speichern hat nicht geklappt: " + e.message); }
     };
     host.appendChild(row);
@@ -1383,15 +1589,234 @@ function zeichneAdmin() {
     };
     if (!t.name) { toast("Bitte einen Namen für den Flexplatz eingeben."); return; }
     $("#admAddBtn").disabled = true;
-    try { await erstelleTischSP(t); await ladeTischeSP(); anwendenTischeAufPlaetze(); alles(); toast(t.name + " wurde hinzugefügt."); }
+    try { await erstelleTischSP(t); await ladeTischeSP(); anwendenTischeAufPlaetze(); alles(); logAktion("Flexplatz hinzugefügt: " + t.name); toast(t.name + " wurde hinzugefügt."); }
     catch (e) { toast("Hinzufügen hat nicht geklappt: " + e.message); }
     $("#admAddBtn").disabled = false;
   };
 }
 
+/* ---------------- Admin: Alle Buchungen ---------------- */
+function platzLabelFuerKey(key) {
+  const p = PLAETZE.find(x => x.key === key);
+  if (!p) return key;
+  return (p.ganz ? p.raumName : p.name) + " (" + p.raumId + ")";
+}
+function zeichneAdminBuchungen() {
+  const host = $("#admBuchListe");
+  const suche = ($("#admBSuche").value || "").toLowerCase();
+  const datum = $("#admBDatum").value;
+  let liste = BUCHUNGEN.slice().sort((a, b) => (a.datum + a.von).localeCompare(b.datum + b.von));
+  if (datum) liste = liste.filter(b => b.datum === datum);
+  if (suche) liste = liste.filter(b => (b.wer || "").toLowerCase().includes(suche) || platzLabelFuerKey(b.key).toLowerCase().includes(suche));
+  if (!liste.length) { host.innerHTML = '<p style="color:var(--ink-3)">Keine Buchungen gefunden.</p>'; return; }
+  const rows = liste.map(b =>
+    '<div class="adm-row" data-id="' + b.id + '">' +
+      '<div class="adm-top"><div>' +
+        '<div class="nm">' + platzLabelFuerKey(b.key) + '</div>' +
+        '<div class="rm">' + dtxt(b.datum) + ' · ' + hhmm(b.von) + '–' + hhmm(b.bis) + ' · ' + (b.wer || "") + '</div>' +
+      '</div><div class="adm-acts"><button class="btn admBDel">Stornieren</button></div></div>' +
+    '</div>'
+  ).join("");
+  host.innerHTML = rows;
+  host.querySelectorAll(".admBDel").forEach(btn => {
+    btn.onclick = async () => {
+      const row = btn.closest(".adm-row"); const id = row.dataset.id;
+      if (!confirm("Diese Buchung wirklich stornieren?")) return;
+      try { const b = BUCHUNGEN.find(x => String(x.id) === String(id)); await loescheBuchungSP(id); await ladeBuchungenSP(); zeichneAdminBuchungen(); alles(); logAktion("Buchung storniert: " + (b ? platzLabelFuerKey(b.key) + " von " + b.wer + " am " + b.datum : id)); toast("Buchung storniert."); }
+      catch (e) { toast("Stornieren hat nicht geklappt: " + e.message); }
+    };
+  });
+}
+function exportiereBuchungenCSV() {
+  const zeilen = [["Platz", "Raum-ID", "Datum", "Von", "Bis", "Wer"]];
+  BUCHUNGEN.slice().sort((a, b) => (a.datum + a.von).localeCompare(b.datum + b.von)).forEach(b => {
+    const p = PLAETZE.find(x => x.key === b.key);
+    zeilen.push([p ? (p.ganz ? p.raumName : p.name) : b.key, p ? p.raumId : "", b.datum, hhmm(b.von), hhmm(b.bis), b.wer || ""]);
+  });
+  const csv = zeilen.map(z => z.map(f => '"' + String(f).replace(/"/g, '""') + '"').join(";")).join("\r\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "flexplatz-buchungen.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---------------- Admin: Admins verwalten ---------------- */
+function zeichneAdmins() {
+  const host = $("#admAdminsListe");
+  if (!listIdAdmins) {
+    host.innerHTML = '<p style="color:var(--busy)">Die Liste "FlexplatzAdmins" existiert in SharePoint noch nicht. Bitte einmalig anlegen (Spalte "Mail", Textzeile), danach lädt diese Ansicht automatisch.</p>';
+    return;
+  }
+  if (!ADMINS_LISTE.length) { host.innerHTML = '<p style="color:var(--ink-3)">Noch keine Admins eingetragen.</p>'; }
+  host.innerHTML = ADMINS_LISTE.map(a =>
+    '<div class="adm-row" data-id="' + a.id + '"><div class="adm-top"><div class="nm">' + a.mail + '</div>' +
+    '<div class="adm-acts"><button class="btn admAdminDel">Entfernen</button></div></div></div>'
+  ).join("");
+  host.querySelectorAll(".admAdminDel").forEach(btn => {
+    btn.onclick = async () => {
+      const row = btn.closest(".adm-row"); const id = row.dataset.id;
+      if (!confirm("Diese Person wirklich die Admin-Rechte entziehen?")) return;
+      try { const entf = ADMINS_LISTE.find(x => String(x.id) === String(id)); await loescheAdminSP(id); await ladeAdminsSP(); zeichneAdmins(); logAktion("Admin-Recht entfernt: " + (entf ? entf.mail : id)); toast("Admin-Recht entfernt."); }
+      catch (e) { toast("Entfernen hat nicht geklappt: " + e.message); }
+    };
+  });
+}
+function adminUnterTabWechseln(v) {
+  ["Plaetze", "Buchungen", "Statistik", "Admins", "Protokoll", "Einstellungen"].forEach(k => {
+    $("#admSub" + k).hidden = (k !== v);
+    $("#tAdm" + k).setAttribute("aria-selected", String(k === v));
+  });
+  if (v === "Buchungen") zeichneAdminBuchungen();
+  if (v === "Admins") { ladeAdminsSP().then(zeichneAdmins); }
+  if (v === "Statistik") zeichneStatistik();
+  if (v === "Protokoll") { ladeLogSP().then(zeichneProtokoll); }
+  if (v === "Einstellungen") { ladeEinstellungenSP().then(zeichneEinstellungen); }
+}
+
+/* ---------------- Bereichs-Zuordnung PW / FRW über den/die Vorgesetzte(n) im Verzeichnis ----------------
+   FRW = Team von Susan Reißaus oder Mandy Kerstan · PW = Team von Kora Seidel oder Veronika Adelsberger */
+const BEREICH_FRW = ["susan reißaus", "mandy kerstan"];
+const BEREICH_PW = ["kora seidel", "veronika adelsberger"];
+const bereichCache = {}; /* mail -> "FRW" | "PW" | "unbekannt" */
+async function ermittleBereichFuerMail(mail) {
+  if (!mail) return "unbekannt";
+  if (bereichCache[mail]) return bereichCache[mail];
+  try {
+    const enc = encodeURIComponent(mail);
+    const mgr = await graphFetch("https://graph.microsoft.com/v1.0/users/" + enc + "/manager?$select=displayName");
+    const name = (mgr.displayName || "").toLowerCase();
+    let b = "unbekannt";
+    if (BEREICH_FRW.includes(name)) b = "FRW";
+    else if (BEREICH_PW.includes(name)) b = "PW";
+    bereichCache[mail] = b;
+    return b;
+  } catch (e) { bereichCache[mail] = "unbekannt"; return "unbekannt"; }
+}
+async function zeichneLiveBelegung() {
+  const jetzt = new Date();
+  const jetztMin = jetzt.getHours() * 60 + jetzt.getMinutes();
+  const heuteStr = heute();
+  $("#liveZeit").textContent = "Stand: " + jetzt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + " Uhr, " + dtxt(heuteStr);
+  const aktuell = BUCHUNGEN.filter(b => b.datum === heuteStr && b.von <= jetztMin && b.bis > jetztMin)
+    .sort((a, b) => platzLabelFuerKey(a.key).localeCompare(platzLabelFuerKey(b.key), "de"));
+  const host = $("#liveListe");
+  if (!aktuell.length) { host.innerHTML = '<p style="color:var(--ink-3)">Gerade sitzt laut Buchungen niemand an einem Flexplatz.</p>'; return; }
+  host.innerHTML = '<p style="color:var(--ink-3)">Lade Bereichszuordnung …</p>';
+
+  const zeile = b =>
+    '<div class="adm-row"><div class="adm-top"><div>' +
+      '<div class="nm">' + (b.wer || "Unbekannt") + '</div>' +
+      '<div class="rm">' + platzLabelFuerKey(b.key) + ' · noch bis ' + hhmm(b.bis) + ' Uhr</div>' +
+    '</div></div></div>';
+  const spalte = (titel, liste) =>
+    '<div><div class="gsec" style="margin-top:0"><h2 style="font-size:16px">' + titel + ' (' + liste.length + ')</h2><span class="ln"></span></div>' +
+    (liste.length ? liste.map(zeile).join("") : '<p style="color:var(--ink-3); font-size:13.5px">Niemand gerade aktiv.</p>') + '</div>';
+
+  if (!spVerfuegbar()) { host.innerHTML = aktuell.map(zeile).join(""); return; } /* Demo-Modus: keine Bereichszuordnung möglich */
+
+  if (IST_ADMIN) {
+    /* Admins sehen beide Bereiche nebeneinander */
+    const gruppen = { FRW: [], PW: [], unbekannt: [] };
+    for (const b of aktuell) { gruppen[await ermittleBereichFuerMail(b.werMail)].push(b); }
+    host.innerHTML =
+      '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:26px">' +
+        spalte("FRW", gruppen.FRW) + spalte("PW", gruppen.PW) +
+        (gruppen.unbekannt.length ? spalte("Bereich unbekannt", gruppen.unbekannt) : "") +
+      '</div>';
+  } else {
+    /* Alle anderen sehen nur ihren eigenen Bereich */
+    const eigenerBereich = await ermittleBereichFuerMail((msalAccount && msalAccount.username) || "");
+    if (eigenerBereich === "unbekannt") {
+      host.innerHTML = '<p style="color:var(--ink-3)">Dein Bereich konnte nicht ermittelt werden, deshalb wird hier nichts angezeigt.</p>';
+      return;
+    }
+    const gefiltert = [];
+    for (const b of aktuell) { if ((await ermittleBereichFuerMail(b.werMail)) === eigenerBereich) gefiltert.push(b); }
+    host.innerHTML = spalte(eigenerBereich, gefiltert);
+  }
+}
+
+/* ---------------- Admin: Statistik ---------------- */
+const WOCHENTAGE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+function zeichneStatistik() {
+  const kacheln = $("#admStatKacheln");
+  const gesamt = BUCHUNGEN.length;
+  const personen = new Set(BUCHUNGEN.map(b => b.wer)).size;
+  const plaetzeGenutzt = new Set(BUCHUNGEN.map(b => b.key)).size;
+  const heuteStr = heute();
+  const kommend = BUCHUNGEN.filter(b => b.datum >= heuteStr).length;
+  kacheln.innerHTML =
+    '<div class="stat"><div class="n teal">' + gesamt + '</div><div class="l">Buchungen insgesamt</div></div>' +
+    '<div class="stat"><div class="n gruen">' + kommend + '</div><div class="l">Anstehend (ab heute)</div></div>' +
+    '<div class="stat"><div class="n lila">' + personen + '</div><div class="l">Verschiedene Personen</div></div>' +
+    '<div class="stat"><div class="n">' + plaetzeGenutzt + '</div><div class="l">Verschiedene Plätze genutzt</div></div>';
+
+  const zaehlerProPlatz = {};
+  BUCHUNGEN.forEach(b => { zaehlerProPlatz[b.key] = (zaehlerProPlatz[b.key] || 0) + 1; });
+  const topListe = Object.entries(zaehlerProPlatz).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const top = $("#admStatTop");
+  if (!topListe.length) { top.innerHTML = '<p style="color:var(--ink-3)">Noch keine Buchungen vorhanden.</p>'; }
+  else {
+    top.innerHTML = topListe.map(([key, n]) =>
+      '<div class="adm-row"><div class="adm-top"><div class="nm">' + platzLabelFuerKey(key) + '</div><div class="rm mono">' + n + ' Buchung' + (n === 1 ? "" : "en") + '</div></div></div>'
+    ).join("");
+  }
+
+  const zaehlerProTag = [0, 0, 0, 0, 0, 0, 0];
+  BUCHUNGEN.forEach(b => {
+    const d = new Date(b.datum + "T00:00:00");
+    if (!isNaN(d)) { const idx = (d.getDay() + 6) % 7; zaehlerProTag[idx]++; }
+  });
+  const maxTag = Math.max(1, ...zaehlerProTag);
+  $("#admStatWochentag").innerHTML = WOCHENTAGE.map((name, i) =>
+    '<div style="display:flex; align-items:center; gap:10px; margin-bottom:8px">' +
+      '<div style="width:90px; font-size:13px; color:var(--ink-2)">' + name + '</div>' +
+      '<div style="flex:1; background:var(--edge-2); border-radius:6px; height:14px; overflow:hidden">' +
+        '<div style="width:' + (zaehlerProTag[i] / maxTag * 100) + '%; background:linear-gradient(90deg,#12857E,#0C6266); height:100%"></div>' +
+      '</div>' +
+      '<div class="mono" style="width:26px; text-align:right; font-size:13px">' + zaehlerProTag[i] + '</div>' +
+    '</div>'
+  ).join("");
+}
+
+/* ---------------- Admin: Protokoll ---------------- */
+function zeichneProtokoll() {
+  const host = $("#admProtokollListe");
+  if (!listIdLog) {
+    host.innerHTML = '<p style="color:var(--busy)">Die Liste "FlexplatzLog" existiert in SharePoint noch nicht. Bitte einmalig anlegen (Spalten "Wer" und "Aktion", beide Textzeile), danach füllt sich diese Ansicht automatisch.</p>';
+    return;
+  }
+  if (!LOG_EINTRAEGE.length) { host.innerHTML = '<p style="color:var(--ink-3)">Noch keine Aktivitäten protokolliert.</p>'; return; }
+  host.innerHTML = LOG_EINTRAEGE.map(e => {
+    const d = new Date(e.zeit);
+    const zeitTxt = isNaN(d) ? e.zeit : d.toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    return '<div class="adm-row"><div class="adm-top"><div>' +
+      '<div class="nm">' + e.aktion + '</div><div class="rm">' + zeitTxt + ' · ' + e.wer + '</div>' +
+      '</div></div></div>';
+  }).join("");
+}
+
+/* ---------------- Admin: Einstellungen (Wartungsmodus + Ankündigung) ---------------- */
+function zeichneEinstellungen() {
+  $("#admWartung").value = EINSTELLUNGEN.wartungsmodus === "ja" ? "ja" : "nein";
+  $("#admAnkuendigung").value = EINSTELLUNGEN.ankuendigung || "";
+}
+function zeichneAnkuendigungsbanner() {
+  let banner = $("#ankuendigungsbanner");
+  const text = EINSTELLUNGEN.ankuendigung || "";
+  if (!text) { if (banner) banner.remove(); return; }
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "ankuendigungsbanner";
+    banner.style.cssText = "background:linear-gradient(90deg,#12857E,#0C6266); color:#fff; text-align:center; font-size:13.5px; font-weight:600; padding:9px 16px";
+    document.querySelector(".shell").insertBefore(banner, document.querySelector(".top"));
+  }
+  banner.textContent = "📣 " + text;
+}
+
 /* ---------------- Ansichten ---------------- */
-const VIEWS = { start:"vStart", gesamt:"vGesamt", raeume:"vRaeume", raum:"vRaum", mine:"vMine", admin:"vAdmin" };
-const TABS = { start:"tStart", gesamt:"tGesamt", raeume:"tRaeume", mine:"tMine", admin:"tAdmin" };
+const VIEWS = { start:"vStart", gesamt:"vGesamt", raeume:"vRaeume", raum:"vRaum", mine:"vMine", live:"vLive", admin:"vAdmin" };
+const TABS = { start:"tStart", gesamt:"tGesamt", raeume:"tRaeume", mine:"tMine", live:"tLiveKurz", admin:"tAdmin" };
 function setView(v, id) {
   S.view = v; if (id) S.raum = id;
   Object.keys(VIEWS).forEach(k => $("#" + VIEWS[k]).hidden = (k !== v));
@@ -1403,10 +1828,11 @@ function setView(v, id) {
 }
 const oeffneRaum = id => setView("raum", id);
 function alles() {
-  controlsFuellen(); zeichneStart();
+  controlsFuellen(); zeichneStart(); platzwahlFuellen();
   if (S.view === "gesamt") zeichnePlan();
   if (S.view === "raeume") zeichneRaeume();
   if (S.view === "raum") zeichneRaum();
+  if (S.view === "live") zeichneLiveBelegung();
   if (S.view === "admin") zeichneAdmin();
   zeichneMeine();
 }
@@ -1436,8 +1862,56 @@ function alles() {
   } else {
     if (!laden()) saat();
   }
+  try { await ladeEinstellungenSP(); } catch (e) {} /* Banner/Wartungsmodus gelten für alle, nicht nur Admins */
+  zeichneAnkuendigungsbanner();
+
+  $("#tLiveKurz").hidden = false; $("#tLiveKurz").onclick = () => setView("live");
+
   IST_ADMIN = await pruefeAdminRecht();
-  if (IST_ADMIN) { $("#tAdmin").hidden = false; $("#tAdmin").onclick = () => setView("admin"); }
+  if (IST_ADMIN) {
+    $("#tAdmin").hidden = false; $("#tAdmin").onclick = () => setView("admin");
+    $("#tAdmPlaetze").onclick = () => adminUnterTabWechseln("Plaetze");
+    $("#tAdmBuchungen").onclick = () => adminUnterTabWechseln("Buchungen");
+    $("#tAdmStatistik").onclick = () => adminUnterTabWechseln("Statistik");
+    $("#tAdmAdmins").onclick = () => adminUnterTabWechseln("Admins");
+    $("#tAdmProtokoll").onclick = () => adminUnterTabWechseln("Protokoll");
+    $("#tAdmEinstellungen").onclick = () => adminUnterTabWechseln("Einstellungen");
+    adminUnterTabWechseln("Plaetze");
+    $("#admBSuche").oninput = zeichneAdminBuchungen;
+    $("#admBDatum").oninput = zeichneAdminBuchungen;
+    $("#admBExport").onclick = exportiereBuchungenCSV;
+    $("#admAdminAddBtn").onclick = async () => {
+      const mail = $("#admAdminNeu").value.trim();
+      if (!mail || mail.indexOf("@") === -1) { toast("Bitte eine gültige E-Mail-Adresse eingeben."); return; }
+      $("#admAdminAddBtn").disabled = true;
+      try { await erstelleAdminSP(mail); await ladeAdminsSP(); zeichneAdmins(); $("#admAdminNeu").value = ""; logAktion("Admin-Recht vergeben: " + mail); toast(mail + " wurde als Admin hinzugefügt."); }
+      catch (e) { toast("Hinzufügen hat nicht geklappt: " + e.message); }
+      $("#admAdminAddBtn").disabled = false;
+    };
+    $("#admWartungSpeichern").onclick = async () => {
+      const wert = $("#admWartung").value;
+      try { await setzeEinstellungSP("wartungsmodus", wert); logAktion("Wartungsmodus " + (wert === "ja" ? "aktiviert" : "deaktiviert")); toast("Gespeichert."); }
+      catch (e) { toast("Speichern hat nicht geklappt: " + e.message); }
+    };
+    $("#admAnkuendigungSpeichern").onclick = async () => {
+      const wert = $("#admAnkuendigung").value.trim();
+      try { await setzeEinstellungSP("ankuendigung", wert); zeichneAnkuendigungsbanner(); logAktion("Ankündigungsbanner " + (wert ? "gesetzt: " + wert : "geleert")); toast("Gespeichert."); }
+      catch (e) { toast("Speichern hat nicht geklappt: " + e.message); }
+    };
+  }
+
+  /* Dark Mode: Wahl merken (nur auf diesem Gerät/Browser) */
+  const THEME_KEY = "flexplatz-theme";
+  function themeAnwenden(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    $("#btnTheme").textContent = t === "dark" ? "☀️" : "🌙";
+  }
+  themeAnwenden(localStorage.getItem(THEME_KEY) || "light");
+  $("#btnTheme").onclick = () => {
+    const neu = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    try { localStorage.setItem(THEME_KEY, neu); } catch (e) {}
+    themeAnwenden(neu);
+  };
 
   $("#pGesamt").onclick = () => setView("gesamt");
   $("#pRaeume").onclick = () => setView("raeume");
