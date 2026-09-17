@@ -791,12 +791,13 @@ async function graphFetch(url, opts = {}) {
 let siteId = null, listIdBuchungen = null, listIdTische = null;
 let colB = null, colT = null; /* Zuordnung: unser Name -> echter interner SharePoint-Name */
 async function ladeSpaltenZuordnung(listId, brauchtNamen) {
-  const j = await graphFetch("https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listId + "/columns?$select=name,displayName");
+  const j = await graphFetch("https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listId + "/columns?$select=name,displayName,readOnly,hidden");
+  const nutzbar = j.value.filter(c => !c.readOnly && !c.hidden);
   const map = {};
   for (const wunsch of brauchtNamen) {
-    const treffer = j.value.find(c => (c.displayName || "").toLowerCase() === wunsch.toLowerCase())
-      || j.value.find(c => (c.name || "").toLowerCase() === wunsch.toLowerCase());
-    if (!treffer) throw new Error("Spalte '" + wunsch + "' wurde in der Liste nicht gefunden. Vorhandene Spalten: " + j.value.map(c => c.displayName).join(", "));
+    const treffer = nutzbar.find(c => (c.displayName || "").toLowerCase() === wunsch.toLowerCase())
+      || nutzbar.find(c => (c.name || "").toLowerCase() === wunsch.toLowerCase());
+    if (!treffer) throw new Error("Spalte '" + wunsch + "' wurde nicht gefunden (oder ist schreibgeschützt). Vorhandene Spalten: " + nutzbar.map(c => c.displayName).join(", "));
     map[wunsch] = treffer.name;
   }
   return map;
