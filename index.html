@@ -642,6 +642,16 @@ img{display:block; max-width:100%}
         <div class="fld"><label>Neue Admin-E-Mail</label><input type="email" id="admAdminNeu" placeholder="name@ics-adminservice.de"></div>
         <div><button class="ok" id="admAdminAddBtn">+ Hinzufügen</button></div>
       </div>
+
+      <div class="gsec" style="margin-top:34px"><h2>Sieht immer alle Bereiche</h2><span class="ln"></span></div>
+      <p style="color:var(--ink-3); margin:-6px 0 18px; font-size:14px">
+        Für z. B. die Geschäftsführung: keine Admin-Rechte, sehen bei "Live-Belegung" aber trotzdem FRW und PW zusammen statt nur einen Bereich.
+      </p>
+      <div id="admSichtAlleListe"></div>
+      <div class="controls" style="margin-top:16px">
+        <div class="fld"><label>Neue E-Mail</label><input type="email" id="admSichtAlleNeu" placeholder="name@ics-adminservice.de"></div>
+        <div><button class="ok" id="admSichtAlleAddBtn">+ Hinzufügen</button></div>
+      </div>
     </div>
 
     <div id="admSubStatistik" hidden>
@@ -892,8 +902,8 @@ async function graphFetch(url, opts = {}) {
   if (!res.ok) { const t = await res.text().catch(() => ""); throw new Error("Graph-Fehler " + res.status + ": " + t); }
   return res.status === 204 ? null : res.json();
 }
-let siteId = null, listIdBuchungen = null, listIdTische = null, listIdAdmins = null, listIdLog = null, listIdEinstellungen = null;
-let colB = null, colT = null, colA = null, colL = null, colE = null; /* Zuordnung: unser Name -> echter interner SharePoint-Name */
+let siteId = null, listIdBuchungen = null, listIdTische = null, listIdAdmins = null, listIdLog = null, listIdEinstellungen = null, listIdSichtAlle = null;
+let colB = null, colT = null, colA = null, colL = null, colE = null, colSA = null; /* Zuordnung: unser Name -> echter interner SharePoint-Name */
 async function ladeSpaltenZuordnung(listId, brauchtNamen) {
   const j = await graphFetch("https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listId + "/columns?$select=name,displayName,readOnly,hidden");
   const nutzbar = j.value.filter(c => !c.readOnly);
@@ -916,6 +926,7 @@ async function ladeSiteUndListenIds() {
   const la = listen.value.find(l => l.displayName === "FlexplatzAdmins");
   const ll = listen.value.find(l => l.displayName === "FlexplatzLog");
   const le = listen.value.find(l => l.displayName === "FlexplatzEinstellungen");
+  const lsa = listen.value.find(l => l.displayName === "FlexplatzSichtAlle");
   if (!lb || !lt) throw new Error("Listen FlexplatzBuchungen/FlexplatzTische nicht gefunden.");
   listIdBuchungen = lb.id; listIdTische = lt.id;
   colB = await ladeSpaltenZuordnung(listIdBuchungen, ["TischKey", "Datum", "Von", "Bis", "Wer"]);
@@ -924,6 +935,7 @@ async function ladeSiteUndListenIds() {
   if (la) { listIdAdmins = la.id; colA = await ladeSpaltenZuordnung(listIdAdmins, ["Mail"]); }
   if (ll) { listIdLog = ll.id; colL = await ladeSpaltenZuordnung(listIdLog, ["Wer", "Aktion"]); }
   if (le) { listIdEinstellungen = le.id; colE = await ladeSpaltenZuordnung(listIdEinstellungen, ["Schluessel", "Wert"]); }
+  if (lsa) { listIdSichtAlle = lsa.id; colSA = await ladeSpaltenZuordnung(listIdSichtAlle, ["Mail"]); }
 }
 async function ladeBuchungenSP() {
   await ladeSiteUndListenIds();
@@ -1042,6 +1054,34 @@ async function erstelleAdminSP(mail) {
 async function loescheAdminSP(id) {
   await ladeSiteUndListenIds();
   const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdAdmins + "/items/" + id;
+  await graphFetch(url, { method: "DELETE" });
+}
+
+/* ---------------- "Sieht alle Bereiche" (FlexplatzSichtAlle) ----------------
+   Für Personen wie die Geschäftsführung: keine Admin-Rechte, sehen bei "Live-Belegung"
+   aber trotzdem beide Bereiche (FRW + PW) statt nur ihren eigenen. */
+let SICHT_ALLE_LISTE = [];
+let SIEHT_ALLE = false;
+async function ladeSichtAlleSP() {
+  if (!spVerfuegbar()) { SICHT_ALLE_LISTE = []; SIEHT_ALLE = false; return; }
+  await ladeSiteUndListenIds();
+  if (!listIdSichtAlle) { SICHT_ALLE_LISTE = []; SIEHT_ALLE = false; return; }
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdSichtAlle + "/items?$expand=fields&$top=500";
+  const j = await graphFetch(url);
+  SICHT_ALLE_LISTE = j.value.map(it => ({ id: it.id, mail: it.fields[colSA.Mail] || "" }));
+  const eigeneMail = ((msalAccount && msalAccount.username) || "").toLowerCase();
+  SIEHT_ALLE = SICHT_ALLE_LISTE.some(x => x.mail.toLowerCase() === eigeneMail);
+}
+async function erstelleSichtAlleSP(mail) {
+  await ladeSiteUndListenIds();
+  if (!listIdSichtAlle) throw new Error("Liste 'FlexplatzSichtAlle' existiert nicht. Bitte zuerst in SharePoint anlegen.");
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdSichtAlle + "/items";
+  const fields = {}; fields[colSA.Mail] = mail;
+  await graphFetch(url, { method: "POST", body: JSON.stringify({ fields }) });
+}
+async function loescheSichtAlleSP(id) {
+  await ladeSiteUndListenIds();
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdSichtAlle + "/items/" + id;
   await graphFetch(url, { method: "DELETE" });
 }
 
@@ -1661,13 +1701,33 @@ function zeichneAdmins() {
     };
   });
 }
+function zeichneSichtAlle() {
+  const host = $("#admSichtAlleListe");
+  if (!listIdSichtAlle) {
+    host.innerHTML = '<p style="color:var(--busy)">Die Liste "FlexplatzSichtAlle" existiert in SharePoint noch nicht. Bitte einmalig anlegen (Spalte "Mail", Textzeile), danach lädt diese Ansicht automatisch.</p>';
+    return;
+  }
+  if (!SICHT_ALLE_LISTE.length) { host.innerHTML = '<p style="color:var(--ink-3)">Noch niemand eingetragen.</p>'; }
+  host.innerHTML = SICHT_ALLE_LISTE.map(a =>
+    '<div class="adm-row" data-id="' + a.id + '"><div class="adm-top"><div class="nm">' + a.mail + '</div>' +
+    '<div class="adm-acts"><button class="btn admSichtAlleDel">Entfernen</button></div></div></div>'
+  ).join("");
+  host.querySelectorAll(".admSichtAlleDel").forEach(btn => {
+    btn.onclick = async () => {
+      const row = btn.closest(".adm-row"); const id = row.dataset.id;
+      if (!confirm("Dieser Person die Rundum-Ansicht wieder entziehen?")) return;
+      try { const entf = SICHT_ALLE_LISTE.find(x => String(x.id) === String(id)); await loescheSichtAlleSP(id); await ladeSichtAlleSP(); zeichneSichtAlle(); logAktion("Sieht-alle-Recht entfernt: " + (entf ? entf.mail : id)); toast("Entfernt."); }
+      catch (e) { toast("Entfernen hat nicht geklappt: " + e.message); }
+    };
+  });
+}
 function adminUnterTabWechseln(v) {
   ["Plaetze", "Buchungen", "Statistik", "Admins", "Protokoll", "Einstellungen"].forEach(k => {
     $("#admSub" + k).hidden = (k !== v);
     $("#tAdm" + k).setAttribute("aria-selected", String(k === v));
   });
   if (v === "Buchungen") zeichneAdminBuchungen();
-  if (v === "Admins") { ladeAdminsSP().then(zeichneAdmins); }
+  if (v === "Admins") { ladeAdminsSP().then(zeichneAdmins); ladeSichtAlleSP().then(zeichneSichtAlle); }
   if (v === "Statistik") zeichneStatistik();
   if (v === "Protokoll") { ladeLogSP().then(zeichneProtokoll); }
   if (v === "Einstellungen") { ladeEinstellungenSP().then(zeichneEinstellungen); }
@@ -1714,8 +1774,7 @@ async function zeichneLiveBelegung() {
 
   if (!spVerfuegbar()) { host.innerHTML = aktuell.map(zeile).join(""); return; } /* Demo-Modus: keine Bereichszuordnung möglich */
 
-  if (IST_ADMIN) {
-    /* Admins sehen beide Bereiche nebeneinander */
+  if (IST_ADMIN || SIEHT_ALLE) {
     const gruppen = { FRW: [], PW: [], unbekannt: [] };
     for (const b of aktuell) { gruppen[await ermittleBereichFuerMail(b.werMail)].push(b); }
     host.innerHTML =
@@ -1868,6 +1927,7 @@ function alles() {
   $("#tLiveKurz").hidden = false; $("#tLiveKurz").onclick = () => setView("live");
 
   IST_ADMIN = await pruefeAdminRecht();
+  try { await ladeSichtAlleSP(); } catch (e) {}
   if (IST_ADMIN) {
     $("#tAdmin").hidden = false; $("#tAdmin").onclick = () => setView("admin");
     $("#tAdmPlaetze").onclick = () => adminUnterTabWechseln("Plaetze");
@@ -1887,6 +1947,14 @@ function alles() {
       try { await erstelleAdminSP(mail); await ladeAdminsSP(); zeichneAdmins(); $("#admAdminNeu").value = ""; logAktion("Admin-Recht vergeben: " + mail); toast(mail + " wurde als Admin hinzugefügt."); }
       catch (e) { toast("Hinzufügen hat nicht geklappt: " + e.message); }
       $("#admAdminAddBtn").disabled = false;
+    };
+    $("#admSichtAlleAddBtn").onclick = async () => {
+      const mail = $("#admSichtAlleNeu").value.trim();
+      if (!mail || mail.indexOf("@") === -1) { toast("Bitte eine gültige E-Mail-Adresse eingeben."); return; }
+      $("#admSichtAlleAddBtn").disabled = true;
+      try { await erstelleSichtAlleSP(mail); await ladeSichtAlleSP(); zeichneSichtAlle(); $("#admSichtAlleNeu").value = ""; logAktion("Sieht-alle-Recht vergeben: " + mail); toast(mail + " sieht jetzt immer alle Bereiche."); }
+      catch (e) { toast("Hinzufügen hat nicht geklappt: " + e.message); }
+      $("#admSichtAlleAddBtn").disabled = false;
     };
     $("#admWartungSpeichern").onclick = async () => {
       const wert = $("#admWartung").value;
