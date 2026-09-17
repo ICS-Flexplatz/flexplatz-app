@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="https://alcdn.msauth.net/browser/3.7.1/js/msal-browser.min.js"></script>
 
 <style>
 :root{
@@ -674,161 +675,186 @@ const dauerTxt = d => d < 60 ? d + " Minuten"
 
 const S = { datum: heute(), start: 9 * 60, dauer: 240, view: "start", raum: null, zoom: 1, fit: true };
 
-/* ---------------- SharePoint-Anbindung (bitte anpassen) ---------------- */
-/* SP.siteUrl: die SharePoint-Seite, auf der die Liste "FlexplatzBuchungen" liegt.
-   SP.listeName: Name der Liste (interne Spaltennamen siehe unten, keine Umlaute/Leerzeichen). */
-const SP = {
-  siteUrl: "https://icsadminservice.sharepoint.com/sites/Flexplatz",
-  listeName: "FlexplatzBuchungen"
+/* ---------------- Anmeldung + Daten-Anbindung (bitte die drei Werte unten eintragen) ----------------
+   Diese App läuft jetzt NICHT mehr in SharePoint selbst, sondern extern gehostet (z. B. GitHub Pages).
+   Für den Zugriff auf die SharePoint-Listen meldet sich jede*r mit dem normalen Microsoft-Firmenkonto an
+   (Single Sign-On über Microsoft Entra ID), die Daten werden über die Microsoft-Graph-API gelesen/geschrieben.
+
+   Die drei Platzhalter unten bekommst du bei der App-Registrierung in Entra ID (entra.microsoft.com):
+     CLIENT_ID  = "Anwendungs-ID (Client)"
+     TENANT_ID  = "Verzeichnis-ID (Mandant)"
+     REDIRECT_URI = die fertige Adresse, unter der diese Datei am Ende erreichbar ist
+                    (z. B. https://deinname.github.io/flexplatz-app/) */
+const MSAL_CONFIG = {
+  clientId: "6b3fb4f6-dfa5-4170-87b8-293468837236",
+  tenantId: "85aaa9f9-d9dd-421a-bff2-e0c7666f9a91",
+  redirectUri: "https://leonktm.github.io/flexplatz-app/"
 };
-/* Nur diese beiden Adressen sehen den Admin-Tab. Einfach hier eintragen/anpassen, kein Code-Wissen nötig. */
+/* Wo eure zwei SharePoint-Listen liegen (unverändert wie bisher). */
+const GRAPH_SITE = {
+  hostname: "icsadminservice.sharepoint.com",
+  sitePath: "/sites/Flexplatz"
+};
+/* Nur diese Adressen sehen den Admin-Tab. Einfach hier eintragen/anpassen, kein Code-Wissen nötig. */
 const ADMIN_EMAILS = [
   "marvin.mustername@deinefirma.de",
   "dein.name@deinefirma.de"
 ];
-function spVerfuegbar() {
-  return location.origin.replace(/\/$/, "") === SP.siteUrl.split("/").slice(0, 3).join("/")
-    && SP.siteUrl.indexOf("DEINEFIRMA") === -1;
+
+function konfiguriert() {
+  return MSAL_CONFIG.clientId.indexOf("DEINE-") === -1
+    && MSAL_CONFIG.tenantId.indexOf("DEINE-") === -1
+    && MSAL_CONFIG.redirectUri.indexOf("DEINE-") === -1;
+}
+
+let msalApp = null;
+let msalAccount = null;
+/* spVerfuegbar() heißt jetzt: "ist Microsoft-Login eingerichtet UND die Person ist gerade angemeldet".
+   Alle bestehenden Stellen im Code, die spVerfuegbar() abfragen, funktionieren dadurch unverändert weiter. */
+function spVerfuegbar() { return konfiguriert() && !!msalAccount; }
+
+async function initMsal() {
+  if (!konfiguriert()) return;
+  msalApp = new msal.PublicClientApplication({
+    auth: {
+      clientId: MSAL_CONFIG.clientId,
+      authority: "https://login.microsoftonline.com/" + MSAL_CONFIG.tenantId,
+      redirectUri: MSAL_CONFIG.redirectUri
+    },
+    cache: { cacheLocation: "sessionStorage" }
+  });
+  await msalApp.initialize();
+  try { await msalApp.handleRedirectPromise(); } catch (e) {}
+  const accs = msalApp.getAllAccounts();
+  if (accs.length) { msalAccount = accs[0]; msalApp.setActiveAccount(msalAccount); }
+}
+
+async function anmelden() {
+  const res = await msalApp.loginPopup({ scopes: ["Sites.ReadWrite.All", "User.Read"] });
+  msalAccount = res.account;
+  msalApp.setActiveAccount(msalAccount);
+}
+
+/* Login-Bildschirm: erscheint einmal, solange die Person noch nicht angemeldet ist. */
+function zeigeLoginGate() {
+  return new Promise(resolve => {
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;inset:0;z-index:999;display:grid;place-items:center;background:var(--bg);padding:20px";
+    ov.innerHTML =
+      '<div style="text-align:center;max-width:340px;padding:28px 26px;background:var(--glass-2);border:1px solid var(--edge);border-radius:var(--r);box-shadow:var(--shadow-2)">' +
+      '<h2 style="font-size:19px;margin-bottom:8px">Flexplatz buchen</h2>' +
+      '<p style="color:var(--ink-2);font-size:13.5px;margin-bottom:18px">Melde dich mit deinem Microsoft-Firmenkonto an, um Plätze zu sehen und zu buchen.</p>' +
+      '<button id="btnMsLogin" style="background:var(--teal);color:#fff;border:none;padding:11px 22px;border-radius:var(--r-s);font-weight:700;font-size:14px;cursor:pointer">Mit Microsoft anmelden</button>' +
+      '<p id="loginFehler" style="color:var(--busy);font-size:12.5px;margin-top:12px;min-height:16px"></p>' +
+      '</div>';
+    document.body.appendChild(ov);
+    document.getElementById("btnMsLogin").onclick = async () => {
+      const btn = document.getElementById("btnMsLogin");
+      btn.disabled = true; btn.textContent = "Anmeldung läuft …";
+      try { await anmelden(); ov.remove(); resolve(); }
+      catch (e) {
+        document.getElementById("loginFehler").textContent = "Anmeldung fehlgeschlagen. Bitte nochmal versuchen.";
+        btn.disabled = false; btn.textContent = "Mit Microsoft anmelden";
+      }
+    };
+  });
 }
 
 let ICH = "Demo-Nutzer";
 async function ermittleAngemeldetenNamen() {
   if (!spVerfuegbar()) return "Demo-Nutzer";
-  try {
-    const res = await fetch(SP.siteUrl + "/_api/web/currentuser", {
-      headers: { Accept: "application/json;odata=verbose" }, credentials: "same-origin"
-    });
-    if (res.ok) { const j = await res.json(); if (j.d && j.d.Title) return j.d.Title; }
-  } catch (e) {}
-  return "Demo-Nutzer";
+  return (msalAccount && (msalAccount.name || msalAccount.username)) || "Angemeldet";
 }
 
 let BUCHUNGEN = [];
 
-/* ---------------- Speicher: lokal (Test) ---------------- */
+/* ---------------- Speicher: lokal (nur solange Entra ID noch nicht eingerichtet ist) ---------------- */
 const KEY = "flexplatz-demo-v3";
 function speichern() { try { localStorage.setItem(KEY, JSON.stringify(BUCHUNGEN)); } catch (e) {} }
 function laden() { try { const r = localStorage.getItem(KEY); if (r) { BUCHUNGEN = JSON.parse(r); return true; } } catch (e) {} return false; }
 
-/* ---------------- Speicher: SharePoint-Liste (live, geteilt) ----------------
-   Spalten in der Liste "FlexplatzBuchungen" (interne Namen, ohne Leerzeichen/Umlaute):
-     TischKey  – Einzeilig Text
-     Datum     – Einzeilig Text, Format "JJJJ-MM-TT"
-     Von       – Zahl (Minuten seit Mitternacht)
-     Bis       – Zahl (Minuten seit Mitternacht)
-     Wer       – Einzeilig Text                                                    */
-let spEntityType = null;
-async function spEntityTypeName() {
-  if (spEntityType) return spEntityType;
-  const url = SP.siteUrl + "/_api/web/lists/getbytitle('" + SP.listeName + "')?$select=ListItemEntityTypeFullName";
-  const res = await fetch(url, { headers: { Accept: "application/json;odata=verbose" }, credentials: "same-origin" });
-  const j = await res.json();
-  spEntityType = j.d.ListItemEntityTypeFullName;
-  return spEntityType;
+/* ---------------- Speicher: SharePoint-Liste über Microsoft Graph (live, geteilt) ----------------
+   Spalten in der Liste "FlexplatzBuchungen" (unverändert wie bisher):
+     TischKey, Datum (JJJJ-MM-TT), Von (Minuten seit Mitternacht), Bis, Wer                          */
+async function graphToken() {
+  const req = { scopes: ["Sites.ReadWrite.All"], account: msalAccount };
+  try { return (await msalApp.acquireTokenSilent(req)).accessToken; }
+  catch (e) { return (await msalApp.acquireTokenPopup(req)).accessToken; }
 }
-async function spDigest() {
-  const res = await fetch(SP.siteUrl + "/_api/contextinfo", {
-    method: "POST", credentials: "same-origin", headers: { Accept: "application/json;odata=verbose" }
-  });
-  const j = await res.json();
-  return j.d.GetContextWebInformation.FormDigestValue;
+async function graphFetch(url, opts = {}) {
+  const token = await graphToken();
+  const headers = Object.assign({ Authorization: "Bearer " + token, "Content-Type": "application/json" }, opts.headers || {});
+  const res = await fetch(url, Object.assign({}, opts, { headers }));
+  if (!res.ok) { const t = await res.text().catch(() => ""); throw new Error("Graph-Fehler " + res.status + ": " + t); }
+  return res.status === 204 ? null : res.json();
+}
+let siteId = null, listIdBuchungen = null, listIdTische = null;
+async function ladeSiteUndListenIds() {
+  if (siteId && listIdBuchungen && listIdTische) return;
+  const s = await graphFetch("https://graph.microsoft.com/v1.0/sites/" + GRAPH_SITE.hostname + ":" + GRAPH_SITE.sitePath);
+  siteId = s.id;
+  const listen = await graphFetch("https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists?$select=id,displayName");
+  const lb = listen.value.find(l => l.displayName === "FlexplatzBuchungen");
+  const lt = listen.value.find(l => l.displayName === "FlexplatzTische");
+  if (!lb || !lt) throw new Error("Listen FlexplatzBuchungen/FlexplatzTische nicht gefunden.");
+  listIdBuchungen = lb.id; listIdTische = lt.id;
 }
 async function ladeBuchungenSP() {
-  const url = SP.siteUrl + "/_api/web/lists/getbytitle('" + SP.listeName + "')/items" +
-    "?$select=Id,TischKey,Datum,Von,Bis,Wer&$top=5000";
-  const res = await fetch(url, { headers: { Accept: "application/json;odata=verbose" }, credentials: "same-origin" });
-  const j = await res.json();
-  BUCHUNGEN = j.d.results.map(it => ({ id: it.Id, key: it.TischKey, datum: it.Datum, von: it.Von, bis: it.Bis, wer: it.Wer }));
+  await ladeSiteUndListenIds();
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdBuchungen + "/items?$expand=fields&$top=5000";
+  const j = await graphFetch(url);
+  BUCHUNGEN = j.value.map(it => ({ id: it.id, key: it.fields.TischKey, datum: it.fields.Datum, von: Number(it.fields.Von), bis: Number(it.fields.Bis), wer: it.fields.Wer }));
 }
 async function erstelleBuchungSP(b) {
-  const [digest, type] = await Promise.all([spDigest(), spEntityTypeName()]);
-  const url = SP.siteUrl + "/_api/web/lists/getbytitle('" + SP.listeName + "')/items";
-  const res = await fetch(url, {
-    method: "POST", credentials: "same-origin",
-    headers: {
-      Accept: "application/json;odata=verbose", "Content-Type": "application/json;odata=verbose",
-      "X-RequestDigest": digest
-    },
-    body: JSON.stringify({ __metadata: { type }, TischKey: b.key, Datum: b.datum, Von: b.von, Bis: b.bis, Wer: b.wer })
-  });
-  if (!res.ok) throw new Error("Buchung konnte nicht gespeichert werden.");
-  const j = await res.json();
-  return j.d.Id;
+  await ladeSiteUndListenIds();
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdBuchungen + "/items";
+  const j = await graphFetch(url, { method: "POST", body: JSON.stringify({ fields: { TischKey: b.key, Datum: b.datum, Von: b.von, Bis: b.bis, Wer: b.wer } }) });
+  return j.id;
 }
 async function loescheBuchungSP(id) {
-  const digest = await spDigest();
-  const url = SP.siteUrl + "/_api/web/lists/getbytitle('" + SP.listeName + "')/items(" + id + ")";
-  const res = await fetch(url, {
-    method: "POST", credentials: "same-origin",
-    headers: { Accept: "application/json;odata=verbose", "X-RequestDigest": digest, "X-HTTP-Method": "DELETE", "IF-MATCH": "*" }
-  });
-  if (!res.ok) throw new Error("Stornieren fehlgeschlagen.");
+  await ladeSiteUndListenIds();
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdBuchungen + "/items/" + id;
+  await graphFetch(url, { method: "DELETE" });
 }
 
-/* ---------------- Speicher: FlexplatzTische (Admin-Verwaltung der Tische) ----------------
-   Spalten in der Liste "FlexplatzTische" (interne Namen, ohne Leerzeichen/Umlaute):
-     TischKey, RaumId, RaumName, Name, Mail, Links, Oben, Breite, Hoehe, Aktiv (Ja/Nein) */
+/* ---------------- Speicher: FlexplatzTische (Admin-Verwaltung der Tische) über Graph ----------------
+   Spalten (unverändert): TischKey, RaumId, RaumName, Name, Mail, Links, Oben, Breite, Hoehe, Aktiv */
 let TISCHE_ADMIN = [];
 let IST_ADMIN = false;
-let spEntityTypeTische = null;
-async function spEntityTypeNameTische() {
-  if (spEntityTypeTische) return spEntityTypeTische;
-  const url = SP.siteUrl + "/_api/web/lists/getbytitle('FlexplatzTische')?$select=ListItemEntityTypeFullName";
-  const res = await fetch(url, { headers: { Accept: "application/json;odata=verbose" }, credentials: "same-origin" });
-  const j = await res.json();
-  spEntityTypeTische = j.d.ListItemEntityTypeFullName;
-  return spEntityTypeTische;
-}
 async function ladeTischeSP() {
-  const url = SP.siteUrl + "/_api/web/lists/getbytitle('FlexplatzTische')/items" +
-    "?$select=Id,TischKey,RaumId,RaumName,Name,Mail,Links,Oben,Breite,Hoehe,Aktiv&$top=5000";
-  const res = await fetch(url, { headers: { Accept: "application/json;odata=verbose" }, credentials: "same-origin" });
-  const j = await res.json();
-  TISCHE_ADMIN = j.d.results.map(it => ({
-    id: it.Id, key: it.TischKey, raumId: it.RaumId, raumName: it.RaumName,
-    name: it.Name || "", mail: it.Mail || "",
-    pos: [Number(it.Links), Number(it.Oben), Number(it.Breite), Number(it.Hoehe)],
-    aktiv: it.Aktiv !== false
+  await ladeSiteUndListenIds();
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdTische + "/items?$expand=fields&$top=5000";
+  const j = await graphFetch(url);
+  TISCHE_ADMIN = j.value.map(it => ({
+    id: it.id, key: it.fields.TischKey, raumId: it.fields.RaumId, raumName: it.fields.RaumName,
+    name: it.fields.Name || "", mail: it.fields.Mail || "",
+    pos: [Number(it.fields.Links), Number(it.fields.Oben), Number(it.fields.Breite), Number(it.fields.Hoehe)],
+    aktiv: it.fields.Aktiv !== false
   }));
 }
 async function erstelleTischSP(t) {
-  const [digest, type] = await Promise.all([spDigest(), spEntityTypeNameTische()]);
-  const url = SP.siteUrl + "/_api/web/lists/getbytitle('FlexplatzTische')/items";
-  const res = await fetch(url, {
-    method: "POST", credentials: "same-origin",
-    headers: { Accept: "application/json;odata=verbose", "Content-Type": "application/json;odata=verbose", "X-RequestDigest": digest },
-    body: JSON.stringify({ __metadata: { type }, TischKey: t.key, RaumId: t.raumId, RaumName: t.raumName, Name: t.name, Mail: t.mail, Links: t.pos[0], Oben: t.pos[1], Breite: t.pos[2], Hoehe: t.pos[3], Aktiv: t.aktiv })
-  });
-  if (!res.ok) throw new Error("Speichern fehlgeschlagen.");
-  const j = await res.json();
-  return j.d.Id;
+  await ladeSiteUndListenIds();
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdTische + "/items";
+  const j = await graphFetch(url, { method: "POST", body: JSON.stringify({ fields: { TischKey: t.key, RaumId: t.raumId, RaumName: t.raumName, Name: t.name, Mail: t.mail, Links: t.pos[0], Oben: t.pos[1], Breite: t.pos[2], Hoehe: t.pos[3], Aktiv: t.aktiv } }) });
+  return j.id;
 }
 async function aktualisiereTischSP(id, t) {
-  const [digest, type] = await Promise.all([spDigest(), spEntityTypeNameTische()]);
-  const url = SP.siteUrl + "/_api/web/lists/getbytitle('FlexplatzTische')/items(" + id + ")";
-  const res = await fetch(url, {
-    method: "POST", credentials: "same-origin",
-    headers: { Accept: "application/json;odata=verbose", "Content-Type": "application/json;odata=verbose", "X-RequestDigest": digest, "X-HTTP-Method": "MERGE", "IF-MATCH": "*" },
-    body: JSON.stringify({ __metadata: { type }, RaumId: t.raumId, RaumName: t.raumName, Name: t.name, Mail: t.mail, Links: t.pos[0], Oben: t.pos[1], Breite: t.pos[2], Hoehe: t.pos[3], Aktiv: t.aktiv })
-  });
-  if (!res.ok) throw new Error("Speichern fehlgeschlagen.");
+  await ladeSiteUndListenIds();
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdTische + "/items/" + id + "/fields";
+  await graphFetch(url, { method: "PATCH", body: JSON.stringify({ RaumId: t.raumId, RaumName: t.raumName, Name: t.name, Mail: t.mail, Links: t.pos[0], Oben: t.pos[1], Breite: t.pos[2], Hoehe: t.pos[3], Aktiv: t.aktiv }) });
 }
 async function loescheTischSP(id) {
-  const digest = await spDigest();
-  const url = SP.siteUrl + "/_api/web/lists/getbytitle('FlexplatzTische')/items(" + id + ")";
-  const res = await fetch(url, {
-    method: "POST", credentials: "same-origin",
-    headers: { Accept: "application/json;odata=verbose", "X-RequestDigest": digest, "X-HTTP-Method": "DELETE", "IF-MATCH": "*" }
-  });
-  if (!res.ok) throw new Error("Löschen fehlgeschlagen.");
+  await ladeSiteUndListenIds();
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdTische + "/items/" + id;
+  await graphFetch(url, { method: "DELETE" });
 }
 /* Beim allerersten Start: aktuelle (hart einprogrammierte) Flexplätze einmalig in die Liste kopieren,
    damit der Admin nicht bei null anfängt, sondern gleich alle bestehenden Plätze sieht und bearbeiten kann. */
 async function seedTischeFallsLeer() {
-  const url = SP.siteUrl + "/_api/web/lists/getbytitle('FlexplatzTische')/items?$select=Id&$top=1";
-  const res = await fetch(url, { headers: { Accept: "application/json;odata=verbose" }, credentials: "same-origin" });
-  const j = await res.json();
-  if (j.d.results.length > 0) return;
+  await ladeSiteUndListenIds();
+  const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdTische + "/items?$top=1";
+  const j = await graphFetch(url);
+  if (j.value.length > 0) return;
   const flexDesks = PLAETZE.filter(p => p.typ === "f" && !p.ganz);
   for (const p of flexDesks) {
     await erstelleTischSP({ key: p.key, raumId: p.raumId, raumName: p.raumName, name: p.name || "", mail: p.mail || "", pos: p.pos, aktiv: true });
@@ -843,19 +869,12 @@ function anwendenTischeAufPlaetze() {
   }));
   PLAETZE.length = 0; PLAETZE.push(...rest, ...live);
 }
-/* Admin-Recht = E-Mail steht in ADMIN_EMAILS oben. Beim lokalen Testen (ohne SharePoint) immer sichtbar,
+/* Admin-Recht = E-Mail steht in ADMIN_EMAILS oben. Beim lokalen Testen (ohne Entra-ID-Login) immer sichtbar,
    damit du den Admin-Bereich schon vorab anschauen kannst. */
 async function pruefeAdminRecht() {
   if (!spVerfuegbar()) return true;
-  try {
-    const res = await fetch(SP.siteUrl + "/_api/web/currentuser", {
-      headers: { Accept: "application/json;odata=verbose" }, credentials: "same-origin"
-    });
-    if (!res.ok) return false;
-    const j = await res.json();
-    const mail = (j.d.Email || "").toLowerCase();
-    return ADMIN_EMAILS.map(e => e.toLowerCase()).includes(mail);
-  } catch (e) { return false; }
+  const mail = (msalAccount.username || "").toLowerCase();
+  return ADMIN_EMAILS.map(e => e.toLowerCase()).includes(mail);
 }
 function saat() {
   const t = heute();
@@ -1372,6 +1391,9 @@ function alles() {
   controlsAufbauen($("#ctlGesamt"), "b");
   controlsAufbauen($("#ctlRaeume"), "c");
   controlsAufbauen($("#ctlRaum"), "d");
+
+  await initMsal();
+  if (konfiguriert() && !msalAccount) { await zeigeLoginGate(); }
 
   ICH = await ermittleAngemeldetenNamen();
   if (spVerfuegbar()) {
