@@ -789,8 +789,20 @@ async function graphFetch(url, opts = {}) {
   return res.status === 204 ? null : res.json();
 }
 let siteId = null, listIdBuchungen = null, listIdTische = null;
+let colB = null, colT = null; /* Zuordnung: unser Name -> echter interner SharePoint-Name */
+async function ladeSpaltenZuordnung(listId, brauchtNamen) {
+  const j = await graphFetch("https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listId + "/columns?$select=name,displayName");
+  const map = {};
+  for (const wunsch of brauchtNamen) {
+    const treffer = j.value.find(c => (c.displayName || "").toLowerCase() === wunsch.toLowerCase())
+      || j.value.find(c => (c.name || "").toLowerCase() === wunsch.toLowerCase());
+    if (!treffer) throw new Error("Spalte '" + wunsch + "' wurde in der Liste nicht gefunden. Vorhandene Spalten: " + j.value.map(c => c.displayName).join(", "));
+    map[wunsch] = treffer.name;
+  }
+  return map;
+}
 async function ladeSiteUndListenIds() {
-  if (siteId && listIdBuchungen && listIdTische) return;
+  if (siteId && listIdBuchungen && listIdTische && colB && colT) return;
   const s = await graphFetch("https://graph.microsoft.com/v1.0/sites/" + GRAPH_SITE.hostname + ":" + GRAPH_SITE.sitePath);
   siteId = s.id;
   const listen = await graphFetch("https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists?$select=id,displayName");
@@ -798,17 +810,21 @@ async function ladeSiteUndListenIds() {
   const lt = listen.value.find(l => l.displayName === "FlexplatzTische");
   if (!lb || !lt) throw new Error("Listen FlexplatzBuchungen/FlexplatzTische nicht gefunden.");
   listIdBuchungen = lb.id; listIdTische = lt.id;
+  colB = await ladeSpaltenZuordnung(listIdBuchungen, ["TischKey", "Datum", "Von", "Bis", "Wer"]);
+  colT = await ladeSpaltenZuordnung(listIdTische, ["TischKey", "RaumId", "RaumName", "Name", "Mail", "Links", "Oben", "Breite", "Hoehe", "Aktiv"]);
 }
 async function ladeBuchungenSP() {
   await ladeSiteUndListenIds();
   const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdBuchungen + "/items?$expand=fields&$top=5000";
   const j = await graphFetch(url);
-  BUCHUNGEN = j.value.map(it => ({ id: it.id, key: it.fields.TischKey, datum: it.fields.Datum, von: Number(it.fields.Von), bis: Number(it.fields.Bis), wer: it.fields.Wer }));
+  BUCHUNGEN = j.value.map(it => ({ id: it.id, key: it.fields[colB.TischKey], datum: it.fields[colB.Datum], von: Number(it.fields[colB.Von]), bis: Number(it.fields[colB.Bis]), wer: it.fields[colB.Wer] }));
 }
 async function erstelleBuchungSP(b) {
   await ladeSiteUndListenIds();
   const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdBuchungen + "/items";
-  const j = await graphFetch(url, { method: "POST", body: JSON.stringify({ fields: { TischKey: b.key, Datum: b.datum, Von: b.von, Bis: b.bis, Wer: b.wer } }) });
+  const fields = {};
+  fields[colB.TischKey] = b.key; fields[colB.Datum] = b.datum; fields[colB.Von] = b.von; fields[colB.Bis] = b.bis; fields[colB.Wer] = b.wer;
+  const j = await graphFetch(url, { method: "POST", body: JSON.stringify({ fields }) });
   return j.id;
 }
 async function loescheBuchungSP(id) {
@@ -826,22 +842,28 @@ async function ladeTischeSP() {
   const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdTische + "/items?$expand=fields&$top=5000";
   const j = await graphFetch(url);
   TISCHE_ADMIN = j.value.map(it => ({
-    id: it.id, key: it.fields.TischKey, raumId: it.fields.RaumId, raumName: it.fields.RaumName,
-    name: it.fields.Name || "", mail: it.fields.Mail || "",
-    pos: [Number(it.fields.Links), Number(it.fields.Oben), Number(it.fields.Breite), Number(it.fields.Hoehe)],
-    aktiv: it.fields.Aktiv !== false
+    id: it.id, key: it.fields[colT.TischKey], raumId: it.fields[colT.RaumId], raumName: it.fields[colT.RaumName],
+    name: it.fields[colT.Name] || "", mail: it.fields[colT.Mail] || "",
+    pos: [Number(it.fields[colT.Links]), Number(it.fields[colT.Oben]), Number(it.fields[colT.Breite]), Number(it.fields[colT.Hoehe])],
+    aktiv: it.fields[colT.Aktiv] !== false
   }));
 }
 async function erstelleTischSP(t) {
   await ladeSiteUndListenIds();
   const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdTische + "/items";
-  const j = await graphFetch(url, { method: "POST", body: JSON.stringify({ fields: { TischKey: t.key, RaumId: t.raumId, RaumName: t.raumName, Name: t.name, Mail: t.mail, Links: t.pos[0], Oben: t.pos[1], Breite: t.pos[2], Hoehe: t.pos[3], Aktiv: t.aktiv } }) });
+  const fields = {};
+  fields[colT.TischKey] = t.key; fields[colT.RaumId] = t.raumId; fields[colT.RaumName] = t.raumName; fields[colT.Name] = t.name; fields[colT.Mail] = t.mail;
+  fields[colT.Links] = t.pos[0]; fields[colT.Oben] = t.pos[1]; fields[colT.Breite] = t.pos[2]; fields[colT.Hoehe] = t.pos[3]; fields[colT.Aktiv] = t.aktiv;
+  const j = await graphFetch(url, { method: "POST", body: JSON.stringify({ fields }) });
   return j.id;
 }
 async function aktualisiereTischSP(id, t) {
   await ladeSiteUndListenIds();
   const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdTische + "/items/" + id + "/fields";
-  await graphFetch(url, { method: "PATCH", body: JSON.stringify({ RaumId: t.raumId, RaumName: t.raumName, Name: t.name, Mail: t.mail, Links: t.pos[0], Oben: t.pos[1], Breite: t.pos[2], Hoehe: t.pos[3], Aktiv: t.aktiv }) });
+  const fields = {};
+  fields[colT.RaumId] = t.raumId; fields[colT.RaumName] = t.raumName; fields[colT.Name] = t.name; fields[colT.Mail] = t.mail;
+  fields[colT.Links] = t.pos[0]; fields[colT.Oben] = t.pos[1]; fields[colT.Breite] = t.pos[2]; fields[colT.Hoehe] = t.pos[3]; fields[colT.Aktiv] = t.aktiv;
+  await graphFetch(url, { method: "PATCH", body: JSON.stringify(fields) });
 }
 async function loescheTischSP(id) {
   await ladeSiteUndListenIds();
@@ -1254,7 +1276,7 @@ async function buchen() {
     toast((p.ganz ? p.raumName : p.name) + " gebucht: " + dtxt(S.datum) + ", " + hhmm(von()) + "–" + hhmm(bis()));
   } catch (e) {
     $("#dlgOk").disabled = false;
-    toast("Buchen hat nicht geklappt, bitte nochmal versuchen.");
+    toast("Buchen hat nicht geklappt: " + e.message);
   }
 }
 let tTimer = null;
@@ -1307,7 +1329,7 @@ function zeichneAdmin() {
     row.querySelector(".admDel").onclick = async () => {
       if (!confirm('"' + (t.name || t.key) + '" wirklich löschen?')) return;
       try { await loescheTischSP(t.id); await ladeTischeSP(); anwendenTischeAufPlaetze(); alles(); toast("Flexplatz gelöscht."); }
-      catch (e) { toast("Löschen hat nicht geklappt."); }
+      catch (e) { toast("Löschen hat nicht geklappt: " + e.message); }
     };
     row.querySelector(".admSave").onclick = async () => {
       const upd = {
@@ -1317,7 +1339,7 @@ function zeichneAdmin() {
         aktiv: $("#admA" + sfx).value === "1"
       };
       try { await aktualisiereTischSP(t.id, upd); await ladeTischeSP(); anwendenTischeAufPlaetze(); alles(); toast("Gespeichert."); }
-      catch (e) { toast("Speichern hat nicht geklappt."); }
+      catch (e) { toast("Speichern hat nicht geklappt: " + e.message); }
     };
     host.appendChild(row);
     admBindPreview(sfx);
@@ -1351,7 +1373,7 @@ function zeichneAdmin() {
     if (!t.name) { toast("Bitte einen Namen für den Flexplatz eingeben."); return; }
     $("#admAddBtn").disabled = true;
     try { await erstelleTischSP(t); await ladeTischeSP(); anwendenTischeAufPlaetze(); alles(); toast(t.name + " wurde hinzugefügt."); }
-    catch (e) { toast("Hinzufügen hat nicht geklappt."); }
+    catch (e) { toast("Hinzufügen hat nicht geklappt: " + e.message); }
     $("#admAddBtn").disabled = false;
   };
 }
@@ -1397,9 +1419,9 @@ function alles() {
 
   ICH = await ermittleAngemeldetenNamen();
   if (spVerfuegbar()) {
-    try { await ladeBuchungenSP(); } catch (e) { toast("Verbindung zur Buchungsliste fehlgeschlagen."); }
+    try { await ladeBuchungenSP(); } catch (e) { toast("Verbindung zur Buchungsliste fehlgeschlagen: " + e.message); }
     try { await seedTischeFallsLeer(); await ladeTischeSP(); anwendenTischeAufPlaetze(); }
-    catch (e) { toast("Tisch-Verwaltung (FlexplatzTische) nicht erreichbar."); }
+    catch (e) { toast("Tisch-Verwaltung (FlexplatzTische) nicht erreichbar: " + e.message); }
   } else {
     if (!laden()) saat();
   }
