@@ -688,18 +688,15 @@ const S = { datum: heute(), start: 9 * 60, dauer: 240, view: "start", raum: null
 const MSAL_CONFIG = {
   clientId: "6b3fb4f6-dfa5-4170-87b8-293468837236",
   tenantId: "85aaa9f9-d9dd-421a-bff2-e0c7666f9a91",
-  redirectUri: "https://leonktm.github.io/flexplatz-app/"
+  redirectUri: "https://ics-flexplatz.github.io/flexplatz-app/"
 };
-/* Wo eure zwei SharePoint-Listen liegen (unverändert wie bisher). */
+/* Wo eure drei SharePoint-Listen liegen. */
 const GRAPH_SITE = {
   hostname: "icsadminservice.sharepoint.com",
   sitePath: "/sites/Flexplatz"
 };
-/* Nur diese Adressen sehen den Admin-Tab. Einfach hier eintragen/anpassen, kein Code-Wissen nötig. */
-const ADMIN_EMAILS = [
-  "marvin.mustername@deinefirma.de",
-  "dein.name@deinefirma.de"
-];
+/* Wer Admin-Rechte hat, steht NICHT mehr im Code (der Code ist öffentlich auf GitHub einsehbar),
+   sondern in der SharePoint-Liste "FlexplatzAdmins" (Spalte "Mail"). Nur nach Login sichtbar. */
 
 function konfiguriert() {
   return MSAL_CONFIG.clientId.indexOf("DEINE-") === -1
@@ -788,11 +785,11 @@ async function graphFetch(url, opts = {}) {
   if (!res.ok) { const t = await res.text().catch(() => ""); throw new Error("Graph-Fehler " + res.status + ": " + t); }
   return res.status === 204 ? null : res.json();
 }
-let siteId = null, listIdBuchungen = null, listIdTische = null;
-let colB = null, colT = null; /* Zuordnung: unser Name -> echter interner SharePoint-Name */
+let siteId = null, listIdBuchungen = null, listIdTische = null, listIdAdmins = null;
+let colB = null, colT = null, colA = null; /* Zuordnung: unser Name -> echter interner SharePoint-Name */
 async function ladeSpaltenZuordnung(listId, brauchtNamen) {
   const j = await graphFetch("https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listId + "/columns?$select=name,displayName,readOnly,hidden");
-  const nutzbar = j.value.filter(c => !c.readOnly && !c.hidden);
+  const nutzbar = j.value.filter(c => !c.readOnly);
   const map = {};
   for (const wunsch of brauchtNamen) {
     const treffer = nutzbar.find(c => (c.displayName || "").toLowerCase() === wunsch.toLowerCase())
@@ -809,10 +806,12 @@ async function ladeSiteUndListenIds() {
   const listen = await graphFetch("https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists?$select=id,displayName");
   const lb = listen.value.find(l => l.displayName === "FlexplatzBuchungen");
   const lt = listen.value.find(l => l.displayName === "FlexplatzTische");
+  const la = listen.value.find(l => l.displayName === "FlexplatzAdmins");
   if (!lb || !lt) throw new Error("Listen FlexplatzBuchungen/FlexplatzTische nicht gefunden.");
   listIdBuchungen = lb.id; listIdTische = lt.id;
   colB = await ladeSpaltenZuordnung(listIdBuchungen, ["TischKey", "Datum", "Von", "Bis", "Wer"]);
   colT = await ladeSpaltenZuordnung(listIdTische, ["TischKey", "RaumId", "RaumName", "Name", "Mail", "Links", "Oben", "Breite", "Hoehe", "Aktiv"]);
+  if (la) { listIdAdmins = la.id; colA = await ladeSpaltenZuordnung(listIdAdmins, ["Mail"]); }
 }
 async function ladeBuchungenSP() {
   await ladeSiteUndListenIds();
@@ -892,12 +891,18 @@ function anwendenTischeAufPlaetze() {
   }));
   PLAETZE.length = 0; PLAETZE.push(...rest, ...live);
 }
-/* Admin-Recht = E-Mail steht in ADMIN_EMAILS oben. Beim lokalen Testen (ohne Entra-ID-Login) immer sichtbar,
-   damit du den Admin-Bereich schon vorab anschauen kannst. */
+/* Admin-Recht = die eigene E-Mail steht in der SharePoint-Liste "FlexplatzAdmins".
+   Beim lokalen Testen (ohne Entra-ID-Login) immer sichtbar, damit du den Admin-Bereich vorab anschauen kannst. */
 async function pruefeAdminRecht() {
   if (!spVerfuegbar()) return true;
-  const mail = (msalAccount.username || "").toLowerCase();
-  return ADMIN_EMAILS.map(e => e.toLowerCase()).includes(mail);
+  try {
+    await ladeSiteUndListenIds();
+    if (!listIdAdmins) return false; /* Liste "FlexplatzAdmins" existiert noch nicht */
+    const url = "https://graph.microsoft.com/v1.0/sites/" + siteId + "/lists/" + listIdAdmins + "/items?$expand=fields&$top=200";
+    const j = await graphFetch(url);
+    const mail = (msalAccount.username || "").toLowerCase();
+    return j.value.some(it => (it.fields[colA.Mail] || "").toLowerCase() === mail);
+  } catch (e) { return false; }
 }
 function saat() {
   const t = heute();
