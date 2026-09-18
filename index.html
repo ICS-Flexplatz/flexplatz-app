@@ -844,9 +844,9 @@ async function initMsal() {
 }
 
 async function anmelden() {
-  const res = await msalApp.loginPopup({ scopes: ["Sites.ReadWrite.All", "User.Read"] });
-  msalAccount = res.account;
-  msalApp.setActiveAccount(msalAccount);
+  await msalApp.loginRedirect({ scopes: ["Sites.ReadWrite.All", "User.Read.All"] });
+  /* Ab hier verlässt der Browser die Seite kurz Richtung Microsoft-Anmeldung und kommt danach
+     automatisch wieder zurück – handleRedirectPromise() in initMsal() übernimmt den Rest. */
 }
 
 /* Login-Bildschirm: erscheint einmal, solange die Person noch nicht angemeldet ist. */
@@ -864,8 +864,8 @@ function zeigeLoginGate() {
     document.body.appendChild(ov);
     document.getElementById("btnMsLogin").onclick = async () => {
       const btn = document.getElementById("btnMsLogin");
-      btn.disabled = true; btn.textContent = "Anmeldung läuft …";
-      try { await anmelden(); ov.remove(); resolve(); }
+      btn.disabled = true; btn.textContent = "Weiterleitung zu Microsoft …";
+      try { await anmelden(); /* Seite navigiert jetzt weg; der Rest hier läuft normalerweise nicht mehr an */ }
       catch (e) {
         document.getElementById("loginFehler").textContent = "Anmeldung fehlgeschlagen. Bitte nochmal versuchen.";
         btn.disabled = false; btn.textContent = "Mit Microsoft anmelden";
@@ -893,7 +893,7 @@ function laden() { try { const r = localStorage.getItem(KEY); if (r) { BUCHUNGEN
 async function graphToken() {
   const req = { scopes: ["Sites.ReadWrite.All", "User.Read.All"], account: msalAccount };
   try { return (await msalApp.acquireTokenSilent(req)).accessToken; }
-  catch (e) { return (await msalApp.acquireTokenPopup(req)).accessToken; }
+  catch (e) { await msalApp.acquireTokenRedirect(req); return new Promise(() => {}); /* Seite navigiert weg, kommt mit gültigem Token zurück */ }
 }
 async function graphFetch(url, opts = {}) {
   const token = await graphToken();
